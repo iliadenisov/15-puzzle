@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <style>
+        /* css preloader: https://shihabiiuc.com/preloader/ */
+        #loader-wrapper {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1001;
+        }
+
+        #loader-wrapper .loader-section {
+            position: fixed;
+            top: 0;
+            width: 51%;
+            height: 100%;
+            z-index: 1000;
+            -webkit-transform: translateX(0);
+            transform: translateX(0);
+        }
+
+        .loader-section {
+            background: #17212B;
+        }
+
+        #loader-wrapper .loader-section.section-left {
+            left: 0;
+        }
+
+        #loader-wrapper .loader-section.section-right {
+            right: 0;
+        }
+
+        #loader {
+            display: block;
+            position: relative;
+            left: 50%;
+            top: 50%;
+            width: 150px;
+            height: 150px;
+            margin: -75px 0 0 -75px;
+            border-radius: 50%;
+            border: 3px solid transparent;
+            border-top-color: #3498db;
+            -webkit-animation: spin 2s linear infinite;
+            animation: spin 2s linear infinite;
+            z-index: 99999;
+        }
+
+        #loader:before {
+            content: "";
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            right: 5px;
+            bottom: 5px;
+            border-radius: 50%;
+            border: 3px solid transparent;
+            border-top-color: #e74c3c;
+            -webkit-animation: spin 3s linear infinite;
+            animation: spin 3s linear infinite;
+        }
+
+        #loader:after {
+            content: "";
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            right: 15px;
+            bottom: 15px;
+            border-radius: 50%;
+            border: 3px solid transparent;
+            border-top-color: #f9c922;
+            -webkit-animation: spin 1.5s linear infinite;
+            animation: spin 1.5s linear infinite;
+        }
+
+        .loaded #loader-wrapper {
+            visibility: hidden;
+            -webkit-transform: translateY(-100%);
+            transform: translateY(-100%);
+            -webkit-transition: all 0.3s 1s ease-out;
+            transition: all 0.3s 1s ease-out;
+        }
+
+        .loaded #loader-wrapper .loader-section.section-left {
+            -webkit-transform: translateX(-100%);
+            transform: translateX(-100%);
+            -webkit-transition: all 0.7s 0.3s cubic-bezier(0.645, 0.045, 0.355, 1);
+            transition: all 0.7s 0.3s cubic-bezier(0.645, 0.045, 0.355, 1);
+        }
+
+        .loaded #loader-wrapper .loader-section.section-right {
+            -webkit-transform: translateX(100%);
+            transform: translateX(100%);
+            -webkit-transition: all 0.7s 0.3s cubic-bezier(0.645, 0.045, 0.355, 1);
+            transition: all 0.7s 0.3s cubic-bezier(0.645, 0.045, 0.355, 1);
+        }
+
+        .loaded #loader {
+            opacity: 0;
+            -webkit-transition: all 0.3s ease-out;
+            transition: all 0.3s ease-out;
+        }
+
+        #message {
+            visibility: hidden;
+        }
+
+        @-webkit-keyframes spin {
+            0% {
+                -webkit-transform: rotate(0deg);
+                transform: rotate(0deg);
+            }
+
+            100% {
+                -webkit-transform: rotate(360deg);
+                transform: rotate(360deg);
+            }
+        }
+
+        @keyframes spin {
+            0% {
+                -webkit-transform: rotate(0deg);
+                transform: rotate(0deg);
+            }
+
+            100% {
+                -webkit-transform: rotate(360deg);
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+
+    <link rel="preload" href="https://telegram.org/js/telegram-web-app.js?59" as="script" />
+    <link rel="preload" href="wasm_exec.js" as="script" />
+    <link rel="preload" href="static/game.wasm" as="fetch" />
+
+    <script src="https://telegram.org/js/telegram-web-app.js?59"></script>
+    <script src="static/wasm_exec.js"></script>
+    <script type="text/javascript">
+        var startLoad, endLoad;
+        var loading = true
+        if (WebAssembly) {
+            startLoading()
+            const go = new Go();
+            // async wasm loading: https://web.dev/articles/loading-wasm
+            (async () => {
+                const fetchPromise = fetch('static/game.wasm');
+                const { instance } = await WebAssembly.instantiateStreaming(fetchPromise, go.importObject);
+                go.run(instance);
+                onLoaded();
+            })();
+        } else {
+            document.getElementById('message').style.visibility = 'visible';
+        }
+
+        function startLoading() {
+            startLoad = performance.now();
+        }
+
+        function onLoaded() {
+            window.Telegram.WebApp.ready();
+            Telegram.WebApp.onEvent('activated', onActivated)
+            Telegram.WebApp.onEvent('deactivated', onDeactivated)
+
+            loading = false
+            endLoad = performance.now();
+            var loadMs = endLoad - startLoad;
+            var seconds = loadMs / 1000;
+            wasmOnLoad((endLoad - startLoad) / 1000,
+                window.Telegram.WebApp.themeParams.bg_color,
+                window.Telegram.WebApp.initDataUnsafe?.user?.language_code ?? 'en')
+
+            document.querySelector("body").classList.add("loaded");
+            wasmSetActive(true);
+        }
+
+        function onActivated() {
+            wasmSetActive(true)
+        }
+
+        function onDeactivated() {
+            wasmSetActive(false)
+        }
+
+        function openLink(url) {
+            window.Telegram.WebApp.openLink(url)
+        }
+
+        async function apiRequest(method, url, code = '') {
+            try {
+                await wasmHTTPRequest(method, url, code, window.Telegram.WebApp.initData)
+            } catch (err) {
+                debug('apiRequest: invoke ' + method + ' url ' + url + ' caught exception: ' + err)
+            }
+        }
+
+        function debug(msg) {
+            console.log(msg)
+            if (!loading) {
+                wasmDebug(msg)
+            }
+        }
+    </script>
+</head>
+
+<body>
+    <div id="message"><p>WebAssembly is not supported in your browser</p></div>
+    <div id="loader-wrapper">
+        <div id="loader"></div>
+        <div class="loader-section section-left"></div>
+        <div class="loader-section section-right"></div>
+    </div>
+    <main id="wasm"></main>
+</body>
+
+</html>

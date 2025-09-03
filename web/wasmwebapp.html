@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<link rel="preload" href="static/game.wasm" as="fetch" />
+<script src="static/wasm_exec.js"></script>
+<script type="text/javascript">
+
+if (!WebAssembly.instantiateStreaming) {
+    WebAssembly.instantiateStreaming = async (resp, importObject) => {
+        const source = await (await resp).arrayBuffer();
+        return await WebAssembly.instantiate(source, importObject);
+    };
+}
+
+const go = new Go();
+WebAssembly.instantiateStreaming(fetch("static/game.wasm"), go.importObject).then(result => {
+    go.run(result.instance);
+});
+
+</script>
