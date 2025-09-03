@@ -109,6 +109,12 @@
 
         #message {
             visibility: hidden;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1010;
         }
 
         @-webkit-keyframes spin {
@@ -210,7 +216,7 @@
 </head>
 
 <body>
-    <div id="message"><p>WebAssembly is not supported in your browser</p></div>
+    <span id="message"><p>WebAssembly is not supported in your browser</p></span>
     <div id="loader-wrapper">
         <div id="loader"></div>
         <div class="loader-section section-left"></div>
