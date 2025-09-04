@@ -15,7 +15,7 @@ const (
 	codeInputTemplate = `[%s] [%s] [%s] [%s]`
 )
 
-type form struct {
+type stats struct {
 	dials       [dials]*button
 	request     func(string)
 	requestSent bool
@@ -34,10 +34,10 @@ func codeBox(b byte) string {
 	return "_"
 }
 
-func newForm(request func(string)) *form {
+func newStats(request func(string)) *stats {
 	col := func(i int) int { return (i%3)*puzzleTileSymW + 5 }
 	row := func(i int) int { return (i/3)*puzzleTileSymH + 3 }
-	f := &form{request: request}
+	f := &stats{request: request}
 	for i := 1; i < dials; i++ {
 		f.dials[i] = NewButton(stringFn(strconv.Itoa(i)), intFn(col(i-1)), intFn(row(i-1)))
 	}
@@ -45,20 +45,20 @@ func newForm(request func(string)) *form {
 	return f
 }
 
-func (f *form) ApiMonitoringHandler(m model.Monitoring) {
-	f.mon.Store(m)
-	f.authFail = false
+func (st *stats) ApiMonitoringHandler(m model.Monitoring) {
+	st.mon.Store(m)
+	st.authFail = false
 }
 
-func (f *form) Tick(t ticker) {
-	if t == ticker1Hz && f.requestSent {
-		f.authFail = f.mon.Load() == nil
+func (st *stats) Tick(t ticker) {
+	if t == ticker1Hz && st.requestSent {
+		st.authFail = st.mon.Load() == nil
 	}
 }
 
-func (f *form) Draw(s Screen) {
+func (st *stats) Draw(s Screen) {
 	drawGameField(s)
-	if v := f.mon.Load(); v != nil {
+	if v := st.mon.Load(); v != nil {
 		m := v.(model.Monitoring)
 		printHeader(s, "Usage Statistics", 0)
 		s.Print(fmt.Sprintf("Players: %d\nGames: %d\nSolved: %d", m.Users, m.GamesStarted, m.GamesSolved),
@@ -66,30 +66,30 @@ func (f *form) Draw(s Screen) {
 			color.RGBA{0, 0xFF, 0xFF, 0xFF})
 	} else {
 		r := image.Rect(8, 1, len(codeInputTemplate)+4, 2)
-		if f.authFail {
+		if st.authFail {
 			s.Fill(r, color.RGBA{0xFF, 0, 0, 0xFF})
-		} else if f.idx == len(f.input) {
+		} else if st.idx == len(st.input) {
 			s.Fill(r, color.RGBA{0x80, 0x80, 0x80, 0xFF})
 		}
-		printHeader(s, fmt.Sprintf(codeInputTemplate, codeBox(f.input[0]), codeBox(f.input[1]), codeBox(f.input[2]), codeBox(f.input[3])), 0)
-		for i := range f.dials {
-			f.dials[i].Draw(s)
+		printHeader(s, fmt.Sprintf(codeInputTemplate, codeBox(st.input[0]), codeBox(st.input[1]), codeBox(st.input[2]), codeBox(st.input[3])), 0)
+		for i := range st.dials {
+			st.dials[i].Draw(s)
 		}
 	}
 }
 
-func (f *form) Interact(a Audio, col, row int, t time.Duration) actionResult {
+func (st *stats) Interact(a Audio, col, row int, t time.Duration) actionResult {
 	if (image.Point{col, row}).In(image.Rect(2, 1, puzzleSymX-2, 2)) {
-		f.input = [4]byte{}
-		f.authFail = false
-		f.requestSent = false
-		f.idx = 0
+		st.input = [4]byte{}
+		st.authFail = false
+		st.requestSent = false
+		st.idx = 0
 		return resultSwitchGame
 	}
-	if f.mon.Load() == nil {
-		for i := range f.dials {
-			if f.dials[i].Interact(col, row) {
-				f.pressNextButton('0' + byte(i))
+	if st.mon.Load() == nil {
+		for i := range st.dials {
+			if st.dials[i].Interact(col, row) {
+				st.pressNextButton('0' + byte(i))
 				break
 			}
 		}
@@ -97,17 +97,17 @@ func (f *form) Interact(a Audio, col, row int, t time.Duration) actionResult {
 	return resultNone
 }
 
-func (f *form) pressNextButton(digit byte) {
-	if f.idx >= len(f.input) {
+func (st *stats) pressNextButton(digit byte) {
+	if st.idx >= len(st.input) {
 		return
 	}
-	f.input[f.idx] = digit
-	f.idx++
-	if f.idx == len(f.input) {
-		f.request(string(f.input[:]))
-		f.requestSent = true
+	st.input[st.idx] = digit
+	st.idx++
+	if st.idx == len(st.input) {
+		st.request(string(st.input[:]))
+		st.requestSent = true
 	}
 }
 
-func (f *form) Activate()        {}
-func (f *form) SetLang(langCode) {}
+func (st *stats) Activate()        {}
+func (st *stats) SetLang(langCode) {}
