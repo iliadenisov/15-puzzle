@@ -2,7 +2,6 @@ package tgbot
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 
 	"github.com/go-telegram/bot"
@@ -38,8 +37,4 @@ func (b *tgBot) Start() {
 	go b.b.Start(b.ctx)
 }
 
-func (b *tgBot) updateHandler(ctx context.Context, _ *bot.Bot, update *models.Update) {
-	if update != nil {
-		b.log.Info(fmt.Sprintf("update:\n%#v\n", *update))
-	}
-}
+func (b *tgBot) updateHandler(ctx context.Context, _ *bot.Bot, _ *models.Update) {}
