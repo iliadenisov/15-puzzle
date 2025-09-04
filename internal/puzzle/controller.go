@@ -139,11 +139,11 @@ func Init(init ...func(*Controller)) error {
 		init[i](c)
 	}
 	c.screens[screenGame] = newGame(c.OnGameStart, c.OnGameSolve, c.UserStatsRequest)
-	c.screens[screenForm] = newForm(c.MonitoringRequest)
+	c.screens[screenForm] = newStats(c.MonitoringRequest)
 	c.screens[screenSplash] = newSplash(c.UrlOpener)
 	c.screens[screenDebug], c.debugFn = newDebugOverlay()
 
-	c.SetLangCode(langCodeRu)
+	c.SetLangCode(langCodeEn)
 
 	return ebiten.RunGame(c)
 }
